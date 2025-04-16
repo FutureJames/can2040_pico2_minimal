@@ -25,9 +25,6 @@ project(pico-can C CXX ASM)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
-# Add compiler flags
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DPICO_RP2350")  # Example: Optimization and warnings
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPICO_RP2350") # Example: Optimization and warnings
 
 include_directories(
    ${CMAKE_SOURCE_DIR}/include
@@ -66,17 +63,6 @@ add_executable(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/main.c ${SRC})
 target_link_libraries(${PROJECT_NAME} PUBLIC
         pico_stdlib
         cmsis_core
-        hardware_flash
-        hardware_irq
-        hardware_adc
-        hardware_pwm
-        hardware_i2c
-        hardware_spi
-        hardware_dma
-        hardware_exception
-        hardware_pio
-        pico_multicore
-
         can2040
         )
 
