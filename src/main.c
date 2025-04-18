@@ -1,6 +1,7 @@
-
-#include "pico/stdlib.h"
 #include <stdbool.h>
+#include "pico/stdlib.h"
+#include "hardware/gpio.h"
+#include "hardware/clocks.h"
 
 //Minimal includes for CAN2040 
 #include <stdio.h>
@@ -13,30 +14,49 @@
   #include "RP2040.h"
 #endif
 
-#define CAN_GPIO_RX 10
-#define CAN_GPIO_TX 11
+static uint32_t pio_num = 0;
+static uint32_t irq_num = 1;
+static uint32_t bitrate = 500000;
+static uint32_t gpio_rx = 4;
+static uint32_t gpio_tx = 5;
 
 static struct can2040 cbus;
 
-static void
-can2040_cb(struct can2040 *cd, uint32_t notify, struct can2040_msg *msg)
+struct can2040_msg msg = {
+  .id = 2 | CAN2040_ID_EFF,
+  .dlc = 8,
+  .data32 = {
+          0xEFBEADDE,
+          0x78563412
+  }
+};
+
+//Callback to handle messages
+static void can2040_cb(struct can2040 *cd, uint32_t notify, struct can2040_msg *msg)
 {
-    // Add message processing code here...
-    printf("CAN message received: ID=0x%03X, DLC=%d, Data=", msg->id, msg->dlc);
+    char buffer[128];
+    if (notify == CAN2040_NOTIFY_RX){   
+      snprintf(buffer, sizeof(buffer), "CAN: rx msg: (id: %0x, size: %0x, data: %0x, %0x)\n", msg->id & 0x7ff, msg->dlc, msg->data32[0], msg->data32[1]);
+      printf("%s", buffer);
+    } else if (notify == CAN2040_NOTIFY_TX) {
+      snprintf(buffer, sizeof(buffer), "CAN: tx msg: (id: %0x, size: %0x, data: %0x, %0x)\n", msg->id & 0x7ff, msg->dlc, msg->data32[0], msg->data32[1]);
+      printf("%s", buffer); 
+    } else if (notify & CAN2040_NOTIFY_ERROR) {
+      //For some reason printing a serial message here causes a crash
+      return;
+    }
 }
 
-static void
-PIOx_IRQHandler(void)
-{
+static void PIOx_IRQHandler(void){
     can2040_pio_irq_handler(&cbus);
 }
 
-void
-canbus_setup(void)
-{
-    uint32_t pio_num = 0;
-    uint32_t sys_clock = 125000000, bitrate = 500000;
-    uint32_t gpio_rx = 4, gpio_tx = 5;
+void canbus_setup(void){
+    // get the actual system clock frequency dynamically 
+    //  to account for overclocking.
+    // pico1 = 125000000
+    // pico2 = 150000000
+    uint32_t sys_clock = clock_get_hz(clk_sys);
 
     // Setup canbus
     can2040_setup(&cbus, pio_num);
@@ -44,15 +64,27 @@ canbus_setup(void)
 
     // Enable irqs
     irq_set_exclusive_handler(PIO0_IRQ_0_IRQn, PIOx_IRQHandler);
-    NVIC_SetPriority(PIO0_IRQ_0_IRQn, 1);
+    NVIC_SetPriority(PIO0_IRQ_0_IRQn, irq_num);
     NVIC_EnableIRQ(PIO0_IRQ_0_IRQn);
 
     // Start canbus
     can2040_start(&cbus, sys_clock, bitrate, gpio_rx, gpio_tx);
 }
 
-int main()
-{
-    stdio_init_all();
-    canbus_setup();
+int main(){
+  //Needed for printf
+  stdio_init_all();
+
+  printf("Initializing CAN Bus...\n"); 
+  canbus_setup();
+  
+  printf("Attempting Test Message: DEADBEEF 12345678\n");
+  can2040_transmit(&cbus, &msg);
+  
+  // While the system sleeps, the IRQ handler will be called
+  printf("Listening on CAN for 500sec...\n");
+  sleep_ms(500000);
+  printf("Exiting...\n");
+  can2040_stop(&cbus);
+  return 0;
 }
