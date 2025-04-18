@@ -1,6 +1,5 @@
 #include <stdbool.h>
 #include "pico/stdlib.h"
-#include "hardware/gpio.h"
 #include "hardware/clocks.h"
 
 //Minimal includes for CAN2040 
