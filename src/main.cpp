@@ -1,10 +1,11 @@
-#include <stdbool.h>
+//  Import in C mode to avoid C++ name mangling
+extern "C" {
+  #include "can2040.h"
+}
+
+#include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/clocks.h"
-
-//Minimal includes for CAN2040 
-#include <stdio.h>
-#include "can2040.h"
 
 // Determine if the target is an rp2350
 #ifdef PICO_RP2350
@@ -20,15 +21,6 @@ static uint32_t gpio_rx = 4;
 static uint32_t gpio_tx = 5;
 
 static struct can2040 cbus;
-
-struct can2040_msg msg = {
-  .id = 2 | CAN2040_ID_EFF,
-  .dlc = 8,
-  .data32 = {
-          0xEFBEADDE,
-          0x78563412
-  }
-};
 
 //Callback to handle messages
 static void can2040_cb(struct can2040 *cd, uint32_t notify, struct can2040_msg *msg)
@@ -76,10 +68,20 @@ int main(){
 
   printf("Initializing CAN Bus...\n"); 
   canbus_setup();
-  
+
+  // Set up a test message to send
+  can2040_msg msg = {
+    .id = (uint32_t)(0xDEADBEEF | CAN2040_ID_EFF),
+    .dlc = 8,
+    .data32 = {
+            0xEFBEADDE,
+            0x78563412
+    }
+  };
+
   printf("Attempting Test Message: DEADBEEF 12345678\n");
   can2040_transmit(&cbus, &msg);
-  
+
   // While the system sleeps, the IRQ handler will be called
   printf("Listening on CAN for 500sec...\n");
   sleep_ms(500000);

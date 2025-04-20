@@ -32,7 +32,7 @@ include_directories(
 )
 
 set(SRC
-   ${CMAKE_SOURCE_DIR}/src/main.c
+   ${CMAKE_SOURCE_DIR}/src/main.cpp
    ${CMAKE_SOURCE_DIR}/lib/can2040/src/can2040.c
 )
 
@@ -57,7 +57,7 @@ target_link_libraries(can2040
 pico_sdk_init()
 pico_generate_pio_header(can2040 ${CMAKE_SOURCE_DIR}/lib/can2040/pio/can2040.pio)
 
-add_executable(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/main.c ${SRC})
+add_executable(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/main.cpp ${SRC})
 
 # Add any user requested libraries
 target_link_libraries(${PROJECT_NAME} PUBLIC
